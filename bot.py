@@ -1,21 +1,42 @@
 import json
-
+import random
 import discord
 from discord.ext import commands
+from discord import app_commands
+from discord import ButtonStyle
 
-with open("config.json") as f:
-    config = json.load(f)
+try: 
+    with open("config.json") as f:
+        config = json.load(f)
+except FileNotFoundError:
+    raise RuntimeError("config.json file not found.")
 
-TOKEN = config["DISCORD_TOKEN"]
-BOT_ID = config["DISCORD_BOT_ID"]
+TOKEN = config.get("DISCORD_TOKEN")
+BOT_ID = config.get("DISCORD_BOT_ID")
 
-bot = commands.Bot(
-    command_prefix=None,
-    help_command=None,
-    is_case_insensitive=True,
-    intents=discord.Intents.all(),
-)
+if not TOKEN:
+    raise RuntimeError("DISCORD_TOKEN not found in config.json.")
+if not BOT_ID:
+    raise RuntimeError("DISCORD_BOT_ID not found in config.json.")
 
+BOT_ID = int(BOT_ID)
+
+class GuessBot(commands.Bot):
+    def __init__(self):
+        super().__init__(
+            command_prefix="!",
+            help_command=None,
+            is_case_insensitive=True,
+            intents=discord.Intents.default(),
+        )
+    
+    async def setup_hook(self):
+        await self.tree.sync()
+
+bot = GuessBot()
+
+button_colors = [ButtonStyle.red,ButtonStyle.green,ButtonStyle.blurple,ButtonStyle.gray]
+button = discord.ui.Button(label="Guess", style=random.choice(button_colors))
 
 @bot.event
 async def on_ready():
@@ -23,13 +44,15 @@ async def on_ready():
     synced = await bot.tree.sync()
     print(f"Synced {len(synced)} commands")
 
-
+user_guess_counter = {}
 @bot.tree.command(
     name="guess",
-    description="Guess the song from the lyrics. Requires spotify oauth connection.",
+    description="Guess the song from the lyrics.",
 )
 async def guess(interaction: discord.Interaction):
-    await interaction.response.send_message("To be implemented...")
+    user_id = interaction.user.id
+    user_guess_counter[user_id] = user_guess_counter.get(user_id, 0) + 1
+    await interaction.response.send_message(f"You have guessed {user_guess_counter[user_id]} time(s)!")
 
 
 bot.run(TOKEN)
