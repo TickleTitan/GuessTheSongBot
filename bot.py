@@ -3,10 +3,9 @@ import random
 import discord
 from discord.ext import commands
 from discord import app_commands
-from discord import ButtonStyle
-from discord import SelectOption, ui
+from discord import ButtonStyle, SelectOption, ui
 
-try: 
+try:
     with open("config.json") as f:
         config = json.load(f)
 except FileNotFoundError:
@@ -22,11 +21,26 @@ if not BOT_ID:
 
 BOT_ID = int(BOT_ID)
 
-#Button colors (random)
-#comment for branch issue2
-button_colors = [ButtonStyle.red,ButtonStyle.green,ButtonStyle.blurple,ButtonStyle.gray]
-button = discord.ui.Button(label="Guess", style=random.choice(button_colors))
-button = button
+button_colors = [
+    ButtonStyle.red,
+    ButtonStyle.green,
+    ButtonStyle.blurple,
+    ButtonStyle.gray,
+]
+
+user_guess_counter: dict[int, int] = {}
+user_hint_counter: dict[int, int] = {}
+user_category: dict[int, str] = {}
+
+#Logging>Print
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+
+logger = logging.getLogger("guessbot")
 
 class GuessBot(commands.Bot):
     def __init__(self):
@@ -36,57 +50,87 @@ class GuessBot(commands.Bot):
             is_case_insensitive=True,
             intents=discord.Intents.default(),
         )
-    
+
     async def setup_hook(self):
+        # Correct place to sync slash commands
         await self.tree.sync()
-
-#Adding selection options
-class CategorySelect(ui.Select):
-    @ui.select(placeholder="Choose a category",
-               options=[SelectOption(label="Pop"),
-                        SelectOption(label="Rock"),
-                        SelectOption(label="Jazz")
-                    ]
-                )
-
-    async def select_callback(self, select, interaction: discord.Interaction):
-        await interaction.response.send_message(f"You selected {self.values[0]} category!",ephemeral=True)
-
-class GuessView(discord.ui.View):
-    def __init__(self, user_id: int):
-        super().__init__(timeout=60)
-        self.user_id = user_id
-        self.add_item(discord.ui.Button(label="Guess", style=random.choice(button_colors)))
-
+        logger.info("Slash commands synced successfully")
 
 bot = GuessBot()
 
-#User hint counter
-user_hint_counter = {}
+class CategorySelect(ui.Select):
+    def __init__(self):
+        options = [
+            SelectOption(label="Pop"),
+            SelectOption(label="Rock"),
+            SelectOption(label="Jazz"),
+        ]
+        super().__init__(
+            placeholder="Choose a category",
+            options=options,
+        )
 
-def user_hint(user_id):
-    user_hint_counter[user_id]= user_hint_counter.get(user_id,0)+1
-    return user_hint_counter[user_id]
+    async def callback(self, interaction: discord.Interaction):
+        user_category[interaction.user.id] = self.values[0]
+        await interaction.response.send_message(
+            f"You selected **{self.values[0]}** category!",
+            ephemeral=True,
+        )
+
+class GuessView(ui.View):
+    def __init__(self, user_id: int):
+        super().__init__(timeout=60)
+        self.user_id = user_id
+
+        # Guess button with random color
+        self.add_item(
+            ui.Button(
+                label="Guess",
+                style=random.choice(button_colors),
+            )
+        )
+
+        # Category select menu
+        self.add_item(CategorySelect())
+
+def get_hint_count(user_id: int) -> int:
+    return user_hint_counter.get(user_id, 0)
 
 @bot.event
 async def on_ready():
-    print("Ready!")
-    synced = await bot.tree.sync()
-    print(f"Synced {len(synced)} commands")
+    logger.info(f"Bot logged in as {bot.user} (ID: {bot.user.id})")
+    if bot.user.id != BOT_ID:
+        logger.error(
+            f"Bot ID mismatch: expected {BOT_ID}, got {bot.user.id}"
+        )
+        raise RuntimeError(
+            f"Bot ID mismatch: expected {BOT_ID}, got {bot.user.id}"
+        ):
+    print(f"Bot logged in as {bot.user} (ID: {bot.user.id})")
+    if bot.user.id != BOT_ID:
+        raise RuntimeError(
+            f"Bot ID mismatch: expected {BOT_ID}, got {bot.user.id}"
+        )
 
-#User guess tracking
-user_guess_counter = {}
 @bot.tree.command(
     name="guess",
     description="Guess the song from the lyrics.",
 )
 async def guess(interaction: discord.Interaction):
     user_id = interaction.user.id
-    user_guess_counter[user_id] = user_guess_counter.get(user_id, 0) + 1
-    await interaction.response.send_message(content=(f"🎵 Guess registered!\n"
-                                                     f"Guesses: {user_guess_counter[user_id]}\n"
-                                                     f"Hints used: {user_hint_counter[user_id]}"),view=GuessView(user_id),ephemeral=True
-)
 
+    # Guess counter
+    user_guess_counter[user_id] = user_guess_counter.get(user_id, 0) + 1
+
+    await interaction.response.send_message(
+        content=(
+            "🎵 **Guess registered!**\n"
+            f"Guesses: {user_guess_counter[user_id]}\n"
+            f"Hints used: {get_hint_count(user_id)}\n"
+            f"Category: {user_category.get(user_id, 'Not selected')}"
+        ),
+        view=GuessView(user_id),
+        ephemeral=True,
+    )
 
 bot.run(TOKEN)
