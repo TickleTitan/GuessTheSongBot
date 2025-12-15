@@ -105,7 +105,7 @@ async def on_ready():
         )
         raise RuntimeError(
             f"Bot ID mismatch: expected {BOT_ID}, got {bot.user.id}"
-        ):
+        )
     print(f"Bot logged in as {bot.user} (ID: {bot.user.id})")
     if bot.user.id != BOT_ID:
         raise RuntimeError(
