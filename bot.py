@@ -35,6 +35,13 @@ class GuessBot(commands.Bot):
 
 bot = GuessBot()
 
+#User hint counter
+user_hint_counter = {}
+
+def user_hint(user_id):
+    user_hint_counter[user_id]= user_hint_counter.get(user_id,0)+1
+    return user_hint_counter[user_id]
+
 #Button colors (random)
 #comment for branch issue2
 button_colors = [ButtonStyle.red,ButtonStyle.green,ButtonStyle.blurple,ButtonStyle.gray]
