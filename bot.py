@@ -133,4 +133,13 @@ async def guess(interaction: discord.Interaction):
         ephemeral=True,
     )
 
+@bot.event
+async def on_connect():
+    logger.info("Bot connected to Discord")
+
+
+@bot.event
+async def on_disconnect():
+    logger.warning("Bot disconnected from Discord")
+
 bot.run(TOKEN)
