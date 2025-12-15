@@ -36,8 +36,10 @@ class GuessBot(commands.Bot):
 bot = GuessBot()
 
 #Button colors (random)
+#comment for branch issue2
 button_colors = [ButtonStyle.red,ButtonStyle.green,ButtonStyle.blurple,ButtonStyle.gray]
 button = discord.ui.Button(label="Guess", style=random.choice(button_colors))
+button = button
 
 @bot.event
 async def on_ready():
@@ -54,7 +56,7 @@ user_guess_counter = {}
 async def guess(interaction: discord.Interaction):
     user_id = interaction.user.id
     user_guess_counter[user_id] = user_guess_counter.get(user_id, 0) + 1
-    await interaction.response.send_message(f"You have guessed {user_guess_counter[user_id]} time(s)!")
+    await interaction.response.send_message(f"You have guessed {user_guess_counter[user_id]} time(s)!",ephemeral=True)
 
 
 bot.run(TOKEN)
