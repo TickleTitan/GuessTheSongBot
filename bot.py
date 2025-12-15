@@ -35,6 +35,7 @@ class GuessBot(commands.Bot):
 
 bot = GuessBot()
 
+#Button colors (random)
 button_colors = [ButtonStyle.red,ButtonStyle.green,ButtonStyle.blurple,ButtonStyle.gray]
 button = discord.ui.Button(label="Guess", style=random.choice(button_colors))
 
@@ -44,6 +45,7 @@ async def on_ready():
     synced = await bot.tree.sync()
     print(f"Synced {len(synced)} commands")
 
+#User guess tracking
 user_guess_counter = {}
 @bot.tree.command(
     name="guess",
